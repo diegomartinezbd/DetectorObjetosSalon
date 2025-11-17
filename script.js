@@ -2,7 +2,7 @@
 // CONFIGURACIÓN
 // =======================================
 const LABELS = ["CPU","Mesa","Mouse","Pantalla","Silla","Teclado"];
-const MODEL_PATH = "modelo.tflite";
+const MODEL_PATH = "best.tflite";
 const MIN_SCORE = 0.25;
 
 let model = null;
@@ -20,16 +20,16 @@ const statusBox = document.getElementById("status");
 const countsBox = document.getElementById("counts");
 
 // =======================================
-// CARGAR MODELO
+// CARGAR 
 // =======================================
 async function loadModel() {
-    statusBox.innerHTML = "Cargando modelo...";
+    statusBox.innerHTML = "Cargando ...";
     try {
         model = await tflite.loadTFLiteModel(MODEL_PATH);
         statusBox.innerHTML = "Modelo cargado correctamente.";
     } catch (err) {
-        console.warn("Error al cargar modelo, se activará el modo simulación:", err);
-        statusBox.innerHTML = "No se pudo cargar el modelo. Modo simulación activado.";
+        console.warn("Error al cargar , se activará el modo simulación:", err);
+        statusBox.innerHTML = "No se pudo cargar el . Modo simulación activado.";
         simulationMode = true;
     }
 }
@@ -81,7 +81,7 @@ function randomDetectionsExample() {
 async function runInference(imgElement) {
 
     if (!model && !simulationMode) {
-        alert("El modelo aún está cargando.");
+        alert("El  aún está cargando.");
         return;
     }
 
@@ -181,3 +181,4 @@ async function runInference(imgElement) {
 
     statusBox.innerHTML = `Listo — ${dets.length} detecciones (${simulationMode ? "simulación" : "real"})`;
 }
+
