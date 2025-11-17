@@ -2,7 +2,7 @@
 // Cargar modelo TFLite
 // =============================
 let model;
-const TFLITE_PATH = "best.pt";
+const TFLITE_PATH = "best.tflite";
 
 // Clases
 const labels = ["CPU","Mesa","Mouse","Pantalla","Silla","Teclado"];
@@ -94,4 +94,5 @@ async function runInference(imgElement) {
 
     document.getElementById("detections").innerHTML = detectionsText;
 }
+
 
