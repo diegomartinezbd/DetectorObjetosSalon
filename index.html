@@ -1,49 +1,135 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8" />
-    <title>Detector de Objetos - Salón de Cómputo</title>
+    <meta charset="UTF-8">
+    <title>Detección de Objetos — Inventario</title>
+
+    <!-- TensorFlow.js y TFLite -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1/dist/tf-tflite.min.js"></script>
 
     <style>
         body {
             font-family: Arial, sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background: #1a73e8;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        #container {
+            display: flex;
+            gap: 20px;
             padding: 20px;
         }
 
-        #preview {
-            max-width: 500px;
-            margin-top: 20px;
-            border: 1px solid #ccc;
+        #left-panel, #right-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.15);
         }
 
-        canvas {
-            max-width: 500px;
+        #left-panel {
+            flex: 2;
+        }
+
+        #right-panel {
+            flex: 1;
+            max-width: 350px;
+        }
+
+        #preview {
+            max-width: 100%;
+            margin-bottom: 10px;
+            display: none;
+        }
+
+        #canvas {
+            width: 100%;
+            border-radius: 6px;
+        }
+
+        #status {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            background: #dfe9ff;
+            border-left: 5px solid #1a73e8;
+            font-weight: bold;
+        }
+
+        #counts div {
+            margin-bottom: 8px;
+            padding: 8px;
+            border-radius: 6px;
+            background: #eef3ff;
+            border-left: 4px solid #1a73e8;
+        }
+
+        #detections {
+            margin-top: 15px;
+            padding: 10px;
+            background: #fff7d1;
+            border-left: 4px solid #f4c542;
+            border-radius: 6px;
+        }
+
+        button {
+            margin-top: 12px;
+            padding: 10px 18px;
+            border: none;
+            background: #1a73e8;
+            color: white;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #135fbd;
         }
     </style>
-
-    <!-- TensorFlow.js -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.16.0/dist/tf.min.js"></script>
-
-    <!-- TFLite Web -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite/dist/tf-tflite.min.js"></script>
-
 </head>
 <body>
 
-    <h1>Detector de Objetos - Salón de Cómputo</h1>
+<header>Inventario — Detección de Objetos (YOLO TFLite)</header>
 
-    <p>Sube una imagen para detectar: CPU, Mesa, Mouse, Pantalla, Silla y Teclado.</p>
+<div id="container">
 
-    <input type="file" id="fileInput" accept="image/*" />
+    <!-- PANEL IZQUIERDO (Imagen + Canvas) -->
+    <div id="left-panel">
 
-    <h3>Imagen cargada:</h3>
-    <img id="preview">
+        <div id="status">Esperando imagen...</div>
 
-    <h3>Resultados:</h3>
-    <canvas id="canvas"></canvas>
+        <input type="file" id="fileInput" accept="image/*"><br><br>
 
-    <p id="detections"></p>
+        <img id="preview" alt="Previsualización">
 
-    <script src="script.js"></script>
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <!-- PANEL DERECHO (Resultados) -->
+    <div id="right-panel">
+        <h3>Conteo por clase</h3>
+        <div id="counts"></div>
+
+        <h3>Detalles</h3>
+        <div id="detections"></div>
+    </div>
+
+</div>
+
+<!-- Tu script ajustado -->
+<script src="script.js"></script>
+
 </body>
 </html>
