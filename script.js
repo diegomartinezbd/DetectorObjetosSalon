@@ -179,6 +179,8 @@ async function runInference(imgElement) {
         d => `${LABELS[d.cls]} (${d.score.toFixed(2)})`
 ).join("<br>");
 
-    statusBox.innerHTML = `Listo — ${dets.length} detecciones (${simulationMode ? "simulación" : "real"})`;
+      statusBox.innerHTML = `Listo — ${dets.length} detecciones`;
 }
+
+
 
