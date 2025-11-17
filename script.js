@@ -2,7 +2,7 @@
 // CONFIGURACIÓN
 // =======================================
 const LABELS = ["CPU","Mesa","Mouse","Pantalla","Silla","Teclado"];
-const MODEL_PATH = "./best.tflite";
+const MODEL_PATH = "best.tflite";
 const MIN_SCORE = 0.25;
 
 let model = null;
@@ -179,3 +179,4 @@ function randomDetectionsExample() {
 
     return items;
 }
+
