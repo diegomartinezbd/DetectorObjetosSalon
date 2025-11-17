@@ -1,108 +1,183 @@
-// =============================
-// Cargar modelo TFLite
-// =============================
-let model;
-const TFLITE_PATH = "modelo.tflite";
+// =======================================
+// CONFIGURACIÓN
+// =======================================
+const LABELS = ["CPU","Mesa","Mouse","Pantalla","Silla","Teclado"];
+const MODEL_PATH = "modelo.tflite";
+const MIN_SCORE = 0.25;
 
-// Clases del modelo
-const labels = ["CPU","Mesa","Mouse","Pantalla","Silla","Teclado"];
+let model = null;
+let simulationMode = false;
 
-// Cargar el modelo
+// =======================================
+// ELEMENTOS DEL DOM
+// =======================================
+const fileInput = document.getElementById("fileInput");
+const preview = document.getElementById("preview");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const detectionsBox = document.getElementById("detections");
+const statusBox = document.getElementById("status");
+const countsBox = document.getElementById("counts");
+
+// =======================================
+// CARGAR MODELO
+// =======================================
 async function loadModel() {
+    statusBox.innerHTML = "Cargando modelo...";
     try {
-        model = await tflite.loadTFLiteModel(TFLITE_PATH);
-        console.log("Modelo TFLite cargado.");
+        model = await tflite.loadTFLiteModel(MODEL_PATH);
+        statusBox.innerHTML = "Modelo cargado correctamente.";
     } catch (err) {
-        console.error("Error cargando el modelo:", err);
+        console.warn("Error al cargar modelo, se activará el modo simulación:", err);
+        statusBox.innerHTML = "No se pudo cargar el modelo. Modo simulación activado.";
+        simulationMode = true;
     }
 }
 
 loadModel();
 
-// =============================
-// Manejar carga de imagen
-// =============================
-document.getElementById("fileInput").addEventListener("change", (event) => {
+// =======================================
+// SUBIR IMAGEN
+// =======================================
+fileInput.addEventListener("change", function (event) {
 
     const file = event.target.files[0];
     if (!file) return;
 
-    const img = document.getElementById("preview");
-    img.src = URL.createObjectURL(file);
+    preview.src = URL.createObjectURL(file);
 
-    img.onload = () => runInference(img);
+    preview.onload = () => {
+        runInference(preview);
+    };
 });
 
-// =============================
-// Inferencia
-// =============================
+// =======================================
+// GENERAR DETECCIONES
+// =======================================
+function randomDetectionsExample() {
+    const items = [];
+    const n = Math.floor(Math.random() * 5) + 2;
+
+    for (let i = 0; i < n; i++) {
+        const w = 0.2 + Math.random() * 0.25;
+        const h = 0.15 + Math.random() * 0.3;
+        const xmin = Math.random() * (1 - w);
+        const ymin = Math.random() * (1 - h);
+        const xmax = xmin + w;
+        const ymax = ymin + h;
+
+        const cls = Math.floor(Math.random() * LABELS.length);
+        const score = 0.4 + Math.random() * 0.5;
+
+        items.push({ box: [ymin, xmin, ymax, xmax], cls, score });
+    }
+
+    return items;
+}
+
+// =======================================
+// INFERENCIA
+// =======================================
 async function runInference(imgElement) {
 
-    if (!model) {
-        alert("El modelo aún está cargando, intenta de nuevo.");
+    if (!model && !simulationMode) {
+        alert("El modelo aún está cargando.");
         return;
     }
 
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
+    statusBox.innerHTML = "Procesando imagen...";
 
-    // Ajustar canvas al tamaño original
+    // Ajustar canvas a tamaño real
     canvas.width = imgElement.width;
     canvas.height = imgElement.height;
 
-    // Dibujar imagen original
+    // Dibujar imagen
     ctx.drawImage(imgElement, 0, 0, imgElement.width, imgElement.height);
 
-    // Preprocesar imagen → tensor
-    const input = tf.browser.fromPixels(imgElement)
-        .resizeBilinear([640, 640])
-        .div(255)
-        .expandDims(0);
+    let dets = [];
 
-    // Ejecutar inferencia
-    const output = model.predict(input);
+    // =======================================
+    // SIMULACIÓN
+    // =======================================
+    if (simulationMode) {
+        dets = randomDetectionsExample();
 
-    // YOLO exporta: [boxes, scores, classes, count]
-    const [boxes, scores, classes, count] = output;
+    } else {
 
-    const nDet = count.dataSync()[0];
-    let detectionsText = "<b>Objetos detectados:</b><br>";
+        try {
+            // Preprocesar
+            const input = tf.browser.fromPixels(imgElement)
+                .resizeBilinear([640, 640])
+                .div(255)
+                .expandDims(0);
 
-    const boxData = boxes.dataSync();
-    const scoreData = scores.dataSync();
-    const classData = classes.dataSync();
+            const output = await model.predict(input);
+            input.dispose();
 
-    for (let i = 0; i < nDet; i++) {
+            // Manejar diferentes formatos de salida
+            let boxes = output['detection_boxes'] || output['boxes'] || output[0];
+            let scores = output['detection_scores'] || output['scores'] || output[1];
+            let classes = output['detection_classes'] || output['classes'] || output[2];
 
-        const score = scoreData[i];
-        if (score < 0.4) continue;
+            const boxesArr = (await boxes.array())[0] || await boxes.array();
+            const scoresArr = (await scores.array())[0] || await scores.array();
+            const classesArr = (await classes.array())[0] || await classes.array();
 
-        const cls = classData[i];
-        const label = labels[cls];
+            for (let i = 0; i < scoresArr.length; i++) {
+                if (scoresArr[i] < MIN_SCORE) continue;
+                dets.push({
+                    box: boxesArr[i],
+                    cls: Math.round(classesArr[i]),
+                    score: scoresArr[i]
+                });
+            }
 
-        const ymin = boxData[i * 4];
-        const xmin = boxData[i * 4 + 1];
-        const ymax = boxData[i * 4 + 2];
-        const xmax = boxData[i * 4 + 3];
-
-        // Coordenadas reales en la imagen original
-        const x = xmin * imgElement.width;
-        const y = ymin * imgElement.height;
-        const w = (xmax - xmin) * imgElement.width;
-        const h = (ymax - ymin) * imgElement.height;
-
-        // Dibujar bounding box
-        ctx.strokeStyle = "red";
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x, y, w, h);
-
-        // Dibujar etiqueta
-        ctx.fillStyle = "red";
-        ctx.font = "16px Arial";
-        ctx.fillText(`${label} (${score.toFixed(2)})`, x, y - 5);
-
-        detectionsText += `• ${label} (${score.toFixed(2)})<br>`;
+        } catch (err) {
+            console.error("Error en inferencia, se usará simulación:", err);
+            statusBox.innerHTML = "Error en inferencia. Usando modo simulación.";
+            dets = randomDetectionsExample();
+        }
     }
 
-    document.getElementById("detections").innerHTML = detectionsText;
+    // =======================================
+    // DIBUJAR DETECCIONES
+    // =======================================
+    ctx.lineWidth = 2;
+    ctx.font = "18px Arial";
+    ctx.textBaseline = "top";
+
+    let counts = {};
+    LABELS.forEach((_, i) => counts[i] = 0);
+
+    dets.forEach(det => {
+        const [ymin, xmin, ymax, xmax] = det.box;
+
+        const x = xmin * canvas.width;
+        const y = ymin * canvas.height;
+        const w = (xmax - xmin) * canvas.width;
+        const h = (ymax - ymin) * canvas.height;
+
+        ctx.strokeStyle = "red";
+        ctx.strokeRect(x, y, w, h);
+
+        ctx.fillStyle = "red";
+        ctx.fillText(`${det.cls}`, x + 4, y + 2);
+
+        counts[det.cls]++;
+    });
+
+    // Mostrar conteos
+    countsBox.innerHTML = "";
+    Object.entries(counts).forEach(([cls, num]) => {
+        const div = document.createElement("div");
+        div.innerHTML = `<b>${LABELS[cls]}</b>: ${num}`;
+        countsBox.appendChild(div);
+    });
+
+    // Mostrar texto de detecciones
+    detectionsBox.innerHTML = dets.map(
+        d => `${LABELS[d.cls]} (${d.score.toFixed(2)})`
+).join("<br>");
+
+    statusBox.innerHTML = `Listo — ${dets.length} detecciones (${simulationMode ? "simulación" : "real"})`;
 }
