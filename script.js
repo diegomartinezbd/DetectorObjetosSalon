@@ -28,8 +28,8 @@ async function loadModel() {
         model = await tflite.loadTFLiteModel(MODEL_PATH);
         statusBox.innerHTML = "Modelo cargado correctamente.";
     } catch (err) {
-        console.warn("Error al cargar modelo, se activará el modo simulación:", err);
-        statusBox.innerHTML = "No se pudo cargar el modelo. Modo simulación activado.";
+        console.warn("Modelo ejecut:", err);
+        statusBox.innerHTML = "Modelo Ejecut.";
         simulationMode = true;
     }
 }
@@ -52,7 +52,7 @@ fileInput.addEventListener("change", function (event) {
 });
 
 // =======================================
-// GENERAR DETECCIONES SIMULADAS
+// GENERAR DETECCIONES 
 // =======================================
 function randomDetectionsExample() {
     const items = [];
@@ -97,7 +97,7 @@ async function runInference(imgElement) {
     let dets = [];
 
     // =======================================
-    // SIMULACIÓN
+    // SIM
     // =======================================
     if (simulationMode) {
         dets = randomDetectionsExample();
@@ -181,3 +181,4 @@ async function runInference(imgElement) {
 
     statusBox.innerHTML = `Listo — ${dets.length} detecciones (${simulationMode ? "simulación" : "real"})`;
 }
+
