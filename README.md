@@ -1,3 +1,5 @@
+Diego Martinez  - 20252695006
+
 Sistema de Inventario Objetos en Salón
 
 Para abrir el ejecutable puede ser desde acá: 
