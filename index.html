@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <title>Detector de Objetos - Salón de Cómputo</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        #preview {
+            max-width: 500px;
+            margin-top: 20px;
+            border: 1px solid #ccc;
+        }
+
+        canvas {
+            max-width: 500px;
+        }
+    </style>
+
+    <!-- TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.16.0/dist/tf.min.js"></script>
+
+    <!-- TFLite Web -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite/dist/tf-tflite.min.js"></script>
+
+</head>
+<body>
+
+    <h1>Detector de Objetos - Salón de Cómputo</h1>
+
+    <p>Sube una imagen para detectar: CPU, Mesa, Mouse, Pantalla, Silla y Teclado.</p>
+
+    <input type="file" id="fileInput" accept="image/*" />
+
+    <h3>Imagen cargada:</h3>
+    <img id="preview">
+
+    <h3>Resultados:</h3>
+    <canvas id="canvas"></canvas>
+
+    <p id="detections"></p>
+
+    <script src="script.js"></script>
+</body>
+</html>
