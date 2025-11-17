@@ -2,11 +2,10 @@
 // CONFIGURACIÓN
 // =======================================
 const LABELS = ["CPU","Mesa","Mouse","Pantalla","Silla","Teclado"];
-const MODEL_PATH = "./best.tflite";
+const MODEL_PATH = "modelo.tflite";
 const MIN_SCORE = 0.25;
 
 let model = null;
-let isModelLoaded = false;
 let simulationMode = false;
 
 // =======================================
@@ -24,13 +23,14 @@ const countsBox = document.getElementById("counts");
 // CARGAR MODELO
 // =======================================
 async function loadModel() {
+    statusBox.innerHTML = "Cargando modelo...";
     try {
-        console.log("Cargando modelo desde:", MODEL_PATH);
         model = await tflite.loadTFLiteModel(MODEL_PATH);
-        isModelLoaded = true;
-        console.log("Modelo cargado correctamente");
-    } catch (error) {
-        console.error("Error cargando el modelo:", error);
+        statusBox.innerHTML = "Modelo cargado correctamente.";
+    } catch (err) {
+        console.warn("Error al cargar modelo, se activará el modo simulación:", err);
+        statusBox.innerHTML = "No se pudo cargar el modelo. Modo simulación activado.";
+        simulationMode = true;
     }
 }
 
@@ -40,22 +40,19 @@ loadModel();
 // SUBIR IMAGEN
 // =======================================
 fileInput.addEventListener("change", function (event) {
-    if (!isModelLoaded && !simulationMode) {
-        alert("El modelo aún está cargando, intenta de nuevo.");
-        return;
-    }
 
     const file = event.target.files[0];
     if (!file) return;
 
     preview.src = URL.createObjectURL(file);
-    preview.style.display = "block";
 
-    preview.onload = () => runInference(preview);
+    preview.onload = () => {
+        runInference(preview);
+    };
 });
 
 // =======================================
-// SIMULACIÓN
+// GENERAR DETECCIONES SIMULADAS
 // =======================================
 function randomDetectionsExample() {
     const items = [];
@@ -79,27 +76,36 @@ function randomDetectionsExample() {
 }
 
 // =======================================
-// INFERENCIA REAL
+// INFERENCIA
 // =======================================
 async function runInference(imgElement) {
 
-    if (!isModelLoaded && !simulationMode) {
-        alert("El modelo aún está cargando, intenta de nuevo.");
+    if (!model && !simulationMode) {
+        alert("El modelo aún está cargando.");
         return;
     }
 
     statusBox.innerHTML = "Procesando imagen...";
 
+    // Ajustar canvas a tamaño real
     canvas.width = imgElement.width;
     canvas.height = imgElement.height;
+
+    // Dibujar imagen
     ctx.drawImage(imgElement, 0, 0, imgElement.width, imgElement.height);
 
     let dets = [];
 
+    // =======================================
+    // SIMULACIÓN
+    // =======================================
     if (simulationMode) {
         dets = randomDetectionsExample();
+
     } else {
+
         try {
+            // Preprocesar
             const input = tf.browser.fromPixels(imgElement)
                 .resizeBilinear([640, 640])
                 .div(255)
@@ -108,17 +114,17 @@ async function runInference(imgElement) {
             const output = await model.predict(input);
             input.dispose();
 
-            const boxes = output[0];
-            const scores = output[1];
-            const classes = output[2];
+            // Manejar diferentes formatos de salida
+            let boxes = output['detection_boxes'] || output['boxes'] || output[0];
+            let scores = output['detection_scores'] || output['scores'] || output[1];
+            let classes = output['detection_classes'] || output['classes'] || output[2];
 
-            const boxesArr = (await boxes.array())[0];
-            const scoresArr = (await scores.array())[0];
-            const classesArr = (await classes.array())[0];
+            const boxesArr = (await boxes.array())[0] || await boxes.array();
+            const scoresArr = (await scores.array())[0] || await scores.array();
+            const classesArr = (await classes.array())[0] || await classes.array();
 
             for (let i = 0; i < scoresArr.length; i++) {
                 if (scoresArr[i] < MIN_SCORE) continue;
-
                 dets.push({
                     box: boxesArr[i],
                     cls: Math.round(classesArr[i]),
@@ -127,23 +133,25 @@ async function runInference(imgElement) {
             }
 
         } catch (err) {
-            console.error("Error en inferencia:", err);
+            console.error("Error en inferencia, se usará simulación:", err);
+            statusBox.innerHTML = "Error en inferencia. Usando modo simulación.";
             dets = randomDetectionsExample();
-            statusBox.innerHTML = "Error en inferencia — usando simulación";
         }
     }
 
-    // ================================
-    // DIBUJAR CAJAS
-    // ================================
+    // =======================================
+    // DIBUJAR DETECCIONES
+    // =======================================
     ctx.lineWidth = 2;
     ctx.font = "18px Arial";
+    ctx.textBaseline = "top";
 
-    const counts = {};
+    let counts = {};
     LABELS.forEach((_, i) => counts[i] = 0);
 
     dets.forEach(det => {
         const [ymin, xmin, ymax, xmax] = det.box;
+
         const x = xmin * canvas.width;
         const y = ymin * canvas.height;
         const w = (xmax - xmin) * canvas.width;
@@ -153,21 +161,23 @@ async function runInference(imgElement) {
         ctx.strokeRect(x, y, w, h);
 
         ctx.fillStyle = "red";
-        ctx.fillText(LABELS[det.cls], x + 4, y + 2);
+        ctx.fillText(`${det.cls}`, x + 4, y + 2);
 
         counts[det.cls]++;
     });
 
-    // Conteos
+    // Mostrar conteos
     countsBox.innerHTML = "";
     Object.entries(counts).forEach(([cls, num]) => {
-        countsBox.innerHTML += `<div><b>${LABELS[cls]}</b>: ${num}</div>`;
+        const div = document.createElement("div");
+        div.innerHTML = `<b>${LABELS[cls]}</b>: ${num}`;
+        countsBox.appendChild(div);
     });
 
-    // Texto
+    // Mostrar texto de detecciones
     detectionsBox.innerHTML = dets.map(
         d => `${LABELS[d.cls]} (${d.score.toFixed(2)})`
-    ).join("<br>");
+).join("<br>");
 
-    statusBox.innerHTML = `Listo — ${dets.length} detecciones`;
+    statusBox.innerHTML = `Listo — ${dets.length} detecciones (${simulationMode ? "simulación" : "real"})`;
 }
