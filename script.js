@@ -22,19 +22,21 @@ const countsBox = document.getElementById("counts");
 // =======================================
 // CARGAR 
 // =======================================
+let model;
+let isModelLoaded = false;
+
 async function loadModel() {
-    statusBox.innerHTML = "Cargando ...";
     try {
-        model = await tflite.loadTFLiteModel(MODEL_PATH);
-        statusBox.innerHTML = "Modelo cargado correctamente.";
-    } catch (err) {
-        console.warn("Error al cargar , se activará el modo simulación:", err);
-        statusBox.innerHTML = "No se pudo cargar el . Modo simulación activado.";
-        simulationMode = true;
+        model = await tflite.loadTFLiteModel('./best.tflite');
+        isModelLoaded = true;
+        console.log("Modelo cargado correctamente");
+    } catch (error) {
+        console.error("Error cargando el modelo:", error);
     }
 }
 
 loadModel();
+
 
 // =======================================
 // SUBIR IMAGEN
@@ -181,4 +183,5 @@ async function runInference(imgElement) {
 
     statusBox.innerHTML = `Listo — ${dets.length} detecciones (${simulationMode ? "simulación" : "real"})`;
 }
+
 
